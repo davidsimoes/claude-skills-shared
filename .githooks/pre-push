@@ -1,0 +1,82 @@
+#!/bin/bash
+# Git pre-push security scan
+# Greps the to-be-pushed commit range for sensitive patterns before allowing the push.
+# Enable in your local clone with: git config core.hooksPath .githooks
+# Bypass once with: git push --no-verify
+set -euo pipefail
+
+# Optional blocklist file. The default location is the author's personal blocklist;
+# contributors can set GIT_OS_BLOCKLIST=/path/to/their/own to override.
+BLOCKLIST="${GIT_OS_BLOCKLIST:-$HOME/.claude/knowledge/opensource-security-blocklist.md}"
+
+# Always-on regex sweep (no blocklist file required). API key shapes we never want to push.
+API_KEY_REGEX='AIzaSy[A-Za-z0-9_-]{33}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|xox[bps]-[0-9]+-[0-9]+-[A-Za-z0-9]+|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.|AKIA[A-Z0-9]{16}|apify_api_[A-Za-z0-9]{20,}|pat[A-Za-z0-9]{14}\.[0-9a-f]{64}|sk_live_[A-Za-z0-9]{24,}|shpat_[a-f0-9]{32}|shpca_[a-f0-9]{32}|shpss_[a-f0-9]{32}'
+
+# Build commit ranges from git pre-push stdin
+NULL_OID="0000000000000000000000000000000000000000"
+RANGES=()
+while read -r local_ref local_oid remote_ref remote_oid; do
+    [ -z "${local_ref:-}" ] && continue
+    [ "$local_oid" = "$NULL_OID" ] && continue
+    if [ "$remote_oid" = "$NULL_OID" ]; then
+        RANGES+=("$local_oid" "--not" "--remotes")
+    else
+        RANGES+=("$remote_oid..$local_oid")
+    fi
+done
+
+[ ${#RANGES[@]} -eq 0 ] && exit 0
+
+# Get added lines only from the push range
+DIFF_CONTENT=$(git diff --no-color "${RANGES[@]}" -- ':!*.lock' ':!package-lock.json' 2>/dev/null | grep '^+' | grep -v '^+++' || true)
+[ -z "$DIFF_CONTENT" ] && exit 0
+
+VIOLATIONS=""
+
+# Literal-string scan from blocklist file (if available)
+if [ -f "$BLOCKLIST" ]; then
+    LITERAL_PATTERNS=$(awk '
+        /^## §1/ { skip = 1; next }
+        /^## §[2-9]/ { skip = 0 }
+        !skip && /^- `[^`]+`/ {
+            match($0, /`[^`]+`/)
+            s = substr($0, RSTART + 1, RLENGTH - 2)
+            sub(/^\*@/, "@", s)
+            if (s != "") print s
+        }
+    ' "$BLOCKLIST" | sort -u)
+
+    if [ -n "$LITERAL_PATTERNS" ]; then
+        while IFS= read -r pat; do
+            [ -z "$pat" ] && continue
+            if echo "$DIFF_CONTENT" | grep -F -- "$pat" >/dev/null 2>&1; then
+                VIOLATIONS+="literal: $pat"$'\n'
+            fi
+        done <<< "$LITERAL_PATTERNS"
+    fi
+fi
+
+# Regex API-key sweep (always runs)
+if echo "$DIFF_CONTENT" | grep -E "$API_KEY_REGEX" >/dev/null 2>&1; then
+    matches=$(echo "$DIFF_CONTENT" | grep -oE "$API_KEY_REGEX" | sort -u | head -5)
+    VIOLATIONS+="API key pattern matches: $matches"$'\n'
+fi
+
+if [ -n "$VIOLATIONS" ]; then
+    {
+        echo ""
+        echo "[X] pre-push security scan BLOCKED the push"
+        echo ""
+        echo "The following sensitive patterns were detected in the commits being pushed:"
+        echo ""
+        echo "$VIOLATIONS" | sed 's/^/  /'
+        echo ""
+        echo "Fix the offending content (amend or new commit) and try again."
+        echo "To override (NOT recommended), use: git push --no-verify"
+        echo ""
+    } >&2
+    exit 1
+fi
+
+echo "[OK] pre-push security scan PASSED" >&2
+exit 0

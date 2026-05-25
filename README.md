@@ -97,6 +97,16 @@ PRs welcome. Conventions:
 - Add tests for any non-trivial shell logic (`chrome-validate` ships a bats-core suite — follow that pattern).
 - Avoid em dashes (—) in markdown if you can; they're an AI-writing tell.
 
+### Optional: pre-push security scan
+
+This repo ships a `.githooks/pre-push` script that scans the commit range being pushed for common API-key shapes and (if you have one) literal patterns from a personal blocklist file. Enable it locally with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+To point the literal-string sweep at your own blocklist file: `export GIT_OS_BLOCKLIST=/path/to/your/blocklist.md`. The hook scans `## §2+` sections of that file (the `## §1` section is reserved for the always-on API-key regex sweep). Format the blocklist as `- \`pattern\`` lines.
+
 ## License
 
 MIT. See [LICENSE](./LICENSE).
