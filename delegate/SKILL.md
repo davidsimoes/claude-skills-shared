@@ -9,7 +9,7 @@ disable-model-invocation: false
 
 Takes a task description, opens a new Claude session in tmux pre-loaded with that task, writes a JSON registry entry for cooperation verbs, and hands the parent back a clean handle (tmux location + registry name).
 
-**Architecture:** cooperation uses tmux send-keys + a JSON registry at `~/.claude/cache/delegate/<slug>.json` — no MCP dependency. (Historical: claude-peers MCP was removed 2026-04-24 to restore AskUserQuestion, which is gated off whenever allowedChannels is non-empty.)
+**Architecture:** cooperation uses tmux send-keys + a JSON registry at `~/.claude/cache/delegate/<slug>.json` — no MCP dependency. Works even when every MCP server is down.
 
 Arguments: `{{ arguments }}`
 
@@ -79,7 +79,7 @@ Window/session naming:
 ## Step 3 — Resolve cwd
 
 1. If `--cwd` provided, validate it exists (`test -d`).
-2. Else look for path hints in the task description (absolute paths, `~/...` paths, project names matching `~/dev/SGA/*` or `~/dev/personal/*` or `~/dev/brain/projects/*`).
+2. Else look for path hints in the task description (absolute paths, `~/...` paths, or project-name keywords matching your dev-root layout — e.g. `~/dev/<project>/`).
 3. Else use the parent's current cwd.
 4. Confirm with the user if inferred from hint — "cwd: `<path>` — ok?"
 
@@ -123,7 +123,7 @@ Call the spawn helper:
 
 On success it emits one JSON line:
 ```json
-{"session":"David","window":"Sales AI Coach","cwd":"/...","tty":"/dev/ttysNNN","pid":12345,"target":"David:Sales AI Coach","where":"window"}
+{"session":"main","window":"My Child Task","cwd":"/...","tty":"/dev/ttysNNN","pid":12345,"target":"main:My Child Task","where":"window"}
 ```
 
 The spawn script auto-dismisses the startup interstitial:
@@ -217,7 +217,7 @@ Key rules:
 - **Never respawn on child crash.** If the spawn script returns code 3, surface it. Let the user inspect.
 - **No MCP dependency for cooperation.** Verbs use tmux + the registry. They work even if every MCP server is down.
 - **No cross-machine.** tmux is local. Fail fast if user passes a hint suggesting remote.
-- **Respect David's model-routing rule.** If the task description implies judgment-heavy work (security, irreversible deploy, architectural decision) and no `--model` was passed, suggest `--model opus` before spawning.
+- **Match model to task weight.** If the task description implies judgment-heavy work (security, irreversible deploy, architectural decision) and no `--model` was passed, suggest `--model opus` before spawning. For pure mechanical work, suggest `--model haiku`.
 
 ---
 
@@ -228,10 +228,8 @@ Key rules:
 - Cooperation verbs full spec: `references/cooperation-verbs.md`
 - Spawn helper: `scripts/spawn.sh`
 - Registry helper (list / resolve / prune / status): `scripts/registry.sh`
-- Full PRD + background: `~/dev/brain/projects/sga/delegate-skill/prd.md`
-- MC loop: `~/dev/brain/commitments/sga-delegate-skill.md`
 
 ## Related skills
 
-- `/close` — the child calls this on itself when told to wrap up.
-- `/loop` — different problem (recurring self-ping on current session).
+- `/close` — referenced by the close verb. Not bundled here; the child can still be terminated via `tmux kill-window` if you don't have a similar wrap-up skill.
+- `/loop` — a different pattern (recurring self-ping on the *current* session), not parallel work.

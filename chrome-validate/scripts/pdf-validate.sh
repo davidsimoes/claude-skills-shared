@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # pdf-validate.sh — PDF text extraction, diacritic count, HTML-source diff.
 #
-# Catches font-subsetting failures that drop Czech diacritics from PDFs even
-# when the source HTML is clean (Pass F from pre-send-qa-gate.md).
+# Catches font-subsetting failures that drop non-ASCII glyphs (diacritics) from
+# PDFs even when the source HTML is clean. Default diacritic set is Czech; edit
+# the DIACRITICS regex below to cover other languages (Polish, Vietnamese, etc.).
 #
 # Usage:
 #   pdf-validate.sh extract <pdf-path>
@@ -10,8 +11,8 @@
 #
 #   pdf-validate.sh diacritic-count <pdf-path>
 #       Prints: count=<n> floor=10 status=PASS|FAIL
-#       Counts Czech diacritic characters. Floor of 10 for any non-trivial
-#       Czech document.
+#       Counts diacritic characters per the DIACRITICS regex. Floor of 10 for
+#       any non-trivial document in a language that uses diacritics.
 #
 #   pdf-validate.sh diff-html <pdf-path> <html-path>
 #       Extracts text from both, normalizes whitespace, diffs.
@@ -61,7 +62,7 @@ cmd_diacritic_count() {
     exit 0
   else
     echo "count=$count floor=$DIACRITIC_FLOOR status=FAIL"
-    echo "FAIL reason: PDF has fewer than $DIACRITIC_FLOOR Czech diacritic chars" >&2
+    echo "FAIL reason: PDF has fewer than $DIACRITIC_FLOOR diacritic chars" >&2
     echo "  Likely cause: font subsetting dropped diacritic glyphs" >&2
     echo "  Fix: regenerate PDF with full Unicode font subset" >&2
     exit 1

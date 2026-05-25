@@ -12,10 +12,10 @@ The spawn helper writes a placeholder entry at spawn time; the child updates `su
 
 ```json
 {
-  "name": "sales-pitches",
-  "tmux_target": "David:1.3",
-  "cwd": "~/dev/SGA/sales-pitches",
-  "summary": "Working on Orkla deck revisions",
+  "name": "deck-revisions",
+  "tmux_target": "main:1.3",
+  "cwd": "~/dev/example-project",
+  "summary": "Revising slides 4–7 of the client deck",
   "spawned_at": "2026-04-24T09:32:00Z",
   "last_updated": "2026-04-24T09:45:12Z",
   "status": "active"
@@ -136,9 +136,9 @@ Resolve. Then:
 Prints a table of all children from the registry, flagged by liveness. Maps to `registry.sh list`. Add `--prune` (parent-side) to translate to `registry.sh prune` for cleanup of dead targets.
 
 ```
-NAME              TMUX TARGET   CWD                   SUMMARY                     AGE    STATE
-sales-pitches     David:1.3     SGA/sales-pitches     Orkla deck revisions        12m    live
-old-analysis      David:2.0     (dead target)         ...                         2d     ☠ stale
+NAME              TMUX TARGET   CWD                       SUMMARY                       AGE    STATE
+deck-revisions    main:1.3      example-project           Revising slides 4–7           12m    live
+old-analysis      main:2.0      (dead target)             ...                           2d     ☠ stale
 ```
 
 ## Edge cases

@@ -10,7 +10,7 @@
 #            [--worktree-name <git-worktree-name>]   (only used if --where=worktree)
 #
 # Emits JSON to stdout on success:
-#   {"session":"David","window":"Sales AI Coach","cwd":"/path","tty":"/dev/ttysNNN","pid":12345,"target":"David:Sales AI Coach","where":"window"}
+#   {"session":"main","window":"My Child Task","cwd":"/path","tty":"/dev/ttysNNN","pid":12345,"target":"main:My Child Task","where":"window"}
 #
 # Exit codes: 0 success, 1 arg error, 2 tmux error, 3 timeout waiting for claude
 

@@ -65,7 +65,7 @@ If the matched route is `response-artifact` AND the content type is **plan / pro
 If none of the above matched cleanly:
 
 1. State the classification confidence: *"This looks like a comparison-with-data — leaning response-artifact (template), but `/dataviz` would handle it too."*
-2. **Confidence test (operational)**: high confidence = "you can cite 2+ specific signals from the tree above that match" (file extensions, explicit prefix words, file paths, presence of step-numbering, etc.). Low confidence = "you're inferring from tone or a single ambiguous keyword." High → state classification, default to response-artifact, proceed (no AskUserQuestion). Low → ask David (single AskUserQuestion, 2-3 options). This resolves the apparent contradiction between Q8's "ambiguous → ask" and the "When in doubt" edge case below.
+2. **Confidence test (operational)**: high confidence = "you can cite 2+ specific signals from the tree above that match" (file extensions, explicit prefix words, file paths, presence of step-numbering, etc.). Low confidence = "you're inferring from tone or a single ambiguous keyword." High → state classification, default to response-artifact, proceed (no AskUserQuestion). Low → ask the user (single AskUserQuestion, 2-3 options). This resolves the apparent contradiction between Q8's "ambiguous → ask" and the "When in doubt" edge case below.
 
 ## Edge cases & overlaps
 
@@ -92,11 +92,11 @@ If the deliverable is "tell me what's wrong + show the evidence", it's an audit;
 
 ### Compound requests ("plan AND visualize data" / "audit AND mock up the fix")
 
-When the request contains 2+ Q's matching strongly (e.g., "show me a plan for X with a dashboard of current data" → Q4 plan + Q1 data), don't silently pick one. Surface the compound to David via AskUserQuestion: "I see two artifacts here — a plan (response-artifact) and a data dashboard (/dataviz). Want both? One? Combined into a single response-artifact with embedded charts?" The default lean is to produce both and cross-link, but check first.
+When the request contains 2+ Q's matching strongly (e.g., "show me a plan for X with a dashboard of current data" → Q4 plan + Q1 data), don't silently pick one. Surface the compound to the user via AskUserQuestion: "I see two artifacts here — a plan (response-artifact) and a data dashboard (/dataviz). Want both? One? Combined into a single response-artifact with embedded charts?" The default lean is to produce both and cross-link, but check first.
 
 ### When in doubt
 
-Default to response-artifact when your confidence is ≥70% — it handles the widest range and the cost of a wrong choice is a re-render, not a deal lost. When confidence is <70%, ask David (see "Otherwise" above).
+Default to response-artifact when your confidence is ≥70% — it handles the widest range and the cost of a wrong choice is a re-render, not a deal lost. When confidence is <70%, ask the user (see "Otherwise" above).
 
 ## Announce the classification
 

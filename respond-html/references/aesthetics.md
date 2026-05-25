@@ -10,7 +10,7 @@ Reading-optimized doesn't mean boring. It means: typography carries the personal
 
 ## Gravity → Aesthetic mapping
 
-Pick the row that best fits the artifact's content. Use the **gravity tag** in the artifact's eyebrow (e.g. "Plan · stern" or "Audit · measured") so David sees the classification.
+Pick the row that best fits the artifact's content. Use the **gravity tag** in the artifact's eyebrow (e.g. "Plan · stern" or "Audit · measured") so the user sees the classification.
 
 | Gravity tag | Content type | Body serif | Heading sans | Accent (light/dark) |
 |---|---|---|---|---|
@@ -45,7 +45,7 @@ State the gravity tag in your one-line classification announcement: *"Classifyin
 - **No more "vary across runs."** Two strategy proposals in a row will both be Crimson Pro + Manrope + jade. That's correct — they're the same shape of artifact.
 - **No state file.** No `~/.claude/skills/respond-html/state.json`.
 
-If David wants variation within a gravity tag (e.g., 3 strategy proposals shouldn't be identical), v0.4 can add a within-row pair swap. Don't pre-build that.
+If the user wants variation within a gravity tag (e.g., 3 strategy proposals shouldn't be identical), v0.4 can add a within-row pair swap. Don't pre-build that.
 
 ## Font URL recipe
 
@@ -102,7 +102,7 @@ The template already implements these — don't fight them.
 - Multiple competing accent colors
 - Box-everywhere layouts (boxes are for callouts only)
 - Gradient text headings
-- Animation on page load (David is reading, not being entertained)
+- Animation on page load (the user is reading, not being entertained)
 - Emoji icons in body content (this is editorial, not a Notion doc — only the reaction-button emojis are allowed)
 - Drop shadows everywhere (the template uses 0-1 drop shadows total)
 

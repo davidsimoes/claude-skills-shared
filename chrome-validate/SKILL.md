@@ -1,12 +1,12 @@
 ---
 name: chrome-validate
-description: Browser-based QA validation for any URL or PDF — screenshots, computed CSS, layout integrity, link liveness, network inspection, PDF text-diff with diacritic check. Use when validating a deck/prototype/PDF before sending to clients, verifying visual fixes via Chrome MCP, checking that font subsetting didn't eat Czech diacritics, or saying 'validate this URL', 'check this PDF', 'verify the deck renders', '/chrome-validate'. Pairs with /pre-send-qa-gate Phase 3 — replaces inline procedures there.
+description: Browser-based QA validation for any URL or PDF — screenshots, computed CSS, layout integrity, link liveness, network inspection, PDF text-diff with diacritic check. Use when validating a deck/prototype/PDF before sending to clients, verifying visual fixes via Chrome MCP, checking that font subsetting didn't eat non-ASCII characters (e.g. Czech/Polish/Vietnamese diacritics), or saying 'validate this URL', 'check this PDF', 'verify the deck renders', '/chrome-validate'.
 user-invocable: true
 ---
 
 # /chrome-validate — Browser & PDF QA
 
-Single skill for the recurring browser-validation patterns extracted from `pre-send-qa-gate.md` Phase 3, `indicative-offer` Step 5, and 5,200+ Chrome MCP calls across 60 days of session JSONLs.
+Single skill for recurring browser-validation patterns: visual QA, computed CSS verification, layout integrity, link liveness, network inspection, PDF text-diff. Designed to be called from other skills or from a pre-send QA workflow, replacing ad-hoc inline procedures.
 
 Six subcommands plus an `all` suite-mode. Each ends with a verification block listing evidence (file path, computed value, curl status). No "looks good" without paste-able proof.
 
@@ -27,7 +27,7 @@ Six subcommands plus an `all` suite-mode. Each ends with a verification block li
 - **Before sending a deck to a client** → `all <url>` then `pdf <pdf>` for every PDF attachment
 - **After a CSS fix** → `css <url> --selector=X` to verify computed value matches what you set
 - **After a layout change** → `layout <url>` to confirm sibling heights/gaps stayed consistent
-- **Czech tender, font fallback risk** → `pdf <pdf> --diff-html=<src.html>` for every PDF (Pass F from `pre-send-qa-gate.md`)
+- **Documents in a language that uses diacritics** (Czech, Polish, Vietnamese, etc.) → `pdf <pdf> --diff-html=<src.html>` for every PDF, to catch font subsetting silently dropping non-ASCII glyphs
 - **Theme dev, asset rendering bug** → `visual <url>` with zoom on the suspect element
 - **API integration changes** → `network <url> --pattern=/api/`
 - **Performance / Lighthouse** → use the `chrome-devtools-mcp` plugin separately. `/chrome-validate` does not duplicate it.
@@ -43,7 +43,7 @@ For every subcommand:
    STATUS: PASS | FAIL
    EVIDENCE: <pasted output, computed value, curl headers, or file path>
    ```
-4. **Stop on FAIL**: do not continue to the next gate. Surface the failure, suggest a fix, ask David what to do.
+4. **Stop on FAIL**: do not continue to the next gate. Surface the failure, suggest a fix, ask the user what to do.
 
 This mirrors the `verification-before-completion` discipline from `superpowers` — every PASS needs evidence, never a bare claim.
 
@@ -82,12 +82,12 @@ e. **Handle `.fragment` bullets**: slides with fragment animations only show the
    - Default (first fragment only) — already captured by step (c)
    - All revealed — run `document.querySelectorAll('.slides .present .fragment').forEach(f => f.classList.add('visible'))`, screenshot, save as `slide-NN-all-fragments.png`
 
-f. **Sidecar iframe-text dump**: if any slide contains an `<iframe>`, dump that iframe's `document.body.innerText` to `$TMPDIR/chrome-validate/visual-<ts>/iframe-text-slide-NN.txt`. This skill doesn't validate Czech grammar (that's Pass C's job in `pre-send-qa-gate.md`), but it has the only opportunity to enumerate iframe content without re-driving Chrome. **Caller responsibility**: Pass C subagents read from `/tmp/czech-review/` by default — copy or symlink these sidecars into that dir if you want them reviewed (`cp $TMPDIR/chrome-validate/visual-*/iframe-text-*.txt /tmp/czech-review/`).
+f. **Sidecar iframe-text dump**: if any slide contains an `<iframe>`, dump that iframe's `document.body.innerText` to `$TMPDIR/chrome-validate/visual-<ts>/iframe-text-slide-NN.txt`. This skill doesn't perform per-sentence language QA on the iframe content, but it has the only opportunity to enumerate iframe content without re-driving Chrome. **Caller responsibility**: any downstream text-review pipeline can read these sidecars (copy/symlink them to wherever your reviewer expects).
 
 **Evidence block**:
 - Slide count + screenshot count
 - Each saved file path
-- For each zoom, a one-line description of what was checked (e.g., "MANA wordmark, white on dark green, no halo")
+- For each zoom, a one-line description of what was checked (e.g., "company wordmark, white on dark background, no halo")
 - Broken-img DOM scan results (PASS = empty list, FAIL = the list)
 
 ### `css <url> --selector=X --check=property:expected_value`
@@ -130,7 +130,7 @@ f. **Sidecar iframe-text dump**: if any slide contains an `<iframe>`, dump that 
 
 #### Sub-check: column alignment (table-shaped layouts)
 
-The steps above catch sibling height / gap / child-count anomalies, but they do NOT verify that header-row column edges align with data-row column edges. That gap shipped a real bug — the SLA dashboard compensation History Summary table (PR #22, May 2026) was rendered as one independent flex row per data row, so each row's columns were sized to their own content and drifted out of alignment with the header. The default layout dump above passed it (gaps fine, heights fine, children count fine) while the columns were visibly misaligned. This sub-check closes that gap.
+The steps above catch sibling height / gap / child-count anomalies, but they do NOT verify that header-row column edges align with data-row column edges. That gap shipped a real bug in production: a dashboard "table" was rendered as one independent flex row per data row, so each row's columns were sized to their own content and drifted out of alignment with the header. The default layout dump passed it (gaps fine, heights fine, children count fine) while the columns were visibly misaligned. This sub-check closes that gap.
 
 **When to run it**: any time the page presents tabular data built from sibling containers (header + N data rows) rather than a `<table>`. CSS-grid "tables", flex "tables", and grid-template-driven dashboards all qualify. For a real `<table>`, the browser aligns columns automatically — this sub-check is unnecessary there.
 
@@ -179,6 +179,8 @@ col4 Running total header [1285.07, 1439.00]  maxAbsΔ 0.00  OK
 
 **Self-test fixture**: `tests/fixtures/column-alignment.html` ships two side-by-side tables in one page — one built from independent flex rows (the bug pattern), one built from a shared CSS-grid template (the fix). Navigating Chrome to `file://<skill-dir>/tests/fixtures/column-alignment.html` and running the snippet above with `TABLE_SELECTOR = '#bad > div'` should produce a FAIL; with `TABLE_SELECTOR = '#good > div'` it should produce a PASS. This is the regression artifact for the gate itself.
 
+
+
 ### `links <url>`
 1. Navigate to `<url>` via Chrome MCP.
 2. Extract all `<a href>` and `<link href>` from the rendered DOM via `javascript_tool`:
@@ -192,12 +194,12 @@ col4 Running total header [1285.07, 1439.00]  maxAbsΔ 0.00  OK
 
 ### `pdf <pdf-path> [--diff-html=<html>]`
 1. Run `scripts/pdf-validate.sh extract <pdf>` — produces text dump.
-2. Run `scripts/pdf-validate.sh diacritic-count <pdf>` — counts Czech diacritic chars. Floor: 10 for any non-trivial Czech doc.
+2. Run `scripts/pdf-validate.sh diacritic-count <pdf>` — counts diacritic chars (defaults to the Czech diacritic set; adjust the script if you need other ranges). Floor: 10 for any non-trivial document in a language that uses diacritics.
 3. If `--diff-html` provided, run `scripts/pdf-validate.sh diff-html <pdf> <html>` — extracts HTML text and diffs against PDF text.
 4. **Evidence**: paste extracted text head, diacritic count, diff (first 40 lines).
 
 ### `network <url> --pattern=X`
-1. Navigate. Trigger the action that should fire the request (let David click, or use `computer.left_click`).
+1. Navigate. Trigger the action that should fire the request (let the user click, or use `computer.left_click`).
 2. Call `mcp__claude-in-chrome__read_network_requests` with filter pattern.
 3. **Evidence**: paste matched requests with status, headers (Authorization redacted), response body summary.
 
@@ -209,9 +211,9 @@ Runs visual → css (skip if no `--selector`) → layout → links sequentially.
 If a gate FAILs **3 times in a row** on the same URL/element:
 1. Stop iterating. You're stuck in a local optimum.
 2. Invoke `superpowers:systematic-debugging` — its 4-phase method exists for this.
-3. If still stuck after that, surface to David with a tight summary of what was tried.
+3. If still stuck after that, surface to the user with a tight summary of what was tried.
 
-This rule comes from `fresh-eyes-gate.md` ("Repeated regression pattern") and `script-extraction-discipline.md` ("3 consecutive rounds of fixes ... each introducing a new bug").
+This rule comes from a broader "repeated regression pattern" / "script extraction discipline" practice: 3 consecutive rounds of fixes each introducing a new bug is a strong signal that the current approach is wrong, not that one more attempt will land it.
 
 ## What this skill does NOT do
 
@@ -219,12 +221,12 @@ This rule comes from `fresh-eyes-gate.md` ("Repeated regression pattern") and `s
 - **Accessibility tree parsing** → use `claude-in-chrome.find` + manual review (Playwright plugin available if needed)
 - **Visual regression diff vs baseline** → no automated solution currently (llmist + Playwright removed from stack); use `visual <url>` on both before/after URLs for manual screenshot comparison
 - **Form interaction testing** → use `/theme-dev` workflow or manual `claude-in-chrome.form_input`
-- **Czech text quality (per-sentence grammar review)** → stays in `pre-send-qa-gate.md` Phase 1.9 Passes B–E (text validation, not browser validation)
+- **Per-sentence grammar/quality review** → that's a text-validation problem, not a browser-validation one; pair with a separate language-QA workflow
 
 ## Why this exists
 
-May 2026: 5 recurring patterns extracted from 5,215 Chrome MCP calls (60 days) + `pre-send-qa-gate.md` Phase 3 + `indicative-offer` Step 5 + `theme-dev` Phase 6. Heavy duplication across those three places. None of the 4 newly-installed plugins (chrome-devtools-mcp, frontend-design, superpowers, slack) cover the full set — closest is chrome-devtools-mcp which adds Lighthouse/perf but not computed-CSS introspection, region zoom, layout integrity, or PDF text-diff. This skill consolidates and is callable from the rule + other skills, replacing the inline duplication.
+Consolidates 5 recurring browser-QA patterns that show up in any workflow that produces client-facing HTML, PDFs, or web apps. The chrome-devtools-mcp plugin handles Lighthouse and performance but not computed-CSS introspection, region zoom, layout integrity, or PDF text-diff — those gaps are what this skill fills, designed to be callable from other skills or from a pre-send QA workflow.
 
-**v1.1 (2026-05-12)** — patched after first end-to-end test on Orkla deck (delegated via `/delegate chrome-validate-orkla`). The visual subcommand caught a real broken `<img src="prototype/index.html">` only because of the DOM enumeration step, NOT the screenshots — the element was `display:none` on screen and would have shipped to PDF as a broken-image icon. v1.1 codifies: chrome-devtools-mcp fallback path, `$TMPDIR` not `/tmp` (workspace-root restriction), reveal.js transition-off for determinism, lazy iframe `data-src`→`src` re-mount, `.fragment` reveal-all pass, mandatory DOM broken-image scan, optional iframe-text sidecar dump for downstream Czech review.
+**v1.1** — added the DOM broken-image enumeration step after a real bug shipped: a broken `<img>` element with `display:none` was invisible to screenshots but would have rendered as a broken-image icon in PDF export. Same release added the chrome-devtools-mcp fallback path, `$TMPDIR` instead of `/tmp` (workspace-root restriction), reveal.js transition-off for deterministic deck capture, lazy iframe `data-src`→`src` re-mount, `.fragment` reveal-all pass, and optional iframe-text sidecar dump for downstream review pipelines.
 
-**v1.2 (2026-05-23)** — added a column-alignment sub-check to the `layout` subcommand. The previous gate confirmed sibling cards/rows had similar heights and that gaps weren't 0, but did NOT verify that header-column edges aligned with data-row column edges. That gap shipped a real bug on the SLA dashboard compensation History Summary table (PR #22) — header + each data row were independent flex containers, so columns drifted because flex sizes each child to its own content. The default layout dump passed it. The new sub-check measures `getBoundingClientRect` on same-index children across sibling row containers and flags |Δ| > 2px. Self-test fixture lives at `tests/fixtures/column-alignment.html` (misaligned flex + aligned grid, side-by-side).
+**v1.2** — added a column-alignment sub-check to the `layout` subcommand. The previous gate confirmed sibling cards/rows had similar heights and that gaps weren't 0, but did NOT verify that header-column edges aligned with data-row column edges. That gap shipped a real bug: header + each data row were independent flex containers, so columns drifted because flex sizes each child to its own content. The default layout dump passed it. The new sub-check measures `getBoundingClientRect` on same-index children across sibling row containers and flags |Δ| > 2px. Self-test fixture lives at `tests/fixtures/column-alignment.html` (misaligned flex + aligned grid, side-by-side).

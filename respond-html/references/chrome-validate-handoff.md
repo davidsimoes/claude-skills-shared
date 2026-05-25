@@ -21,11 +21,11 @@ After writing the file, you have two options depending on whether `claude-in-chr
 /chrome-validate all file://<absolute-path>/index.html
 ```
 
-Where `<absolute-path>` is whichever path Phase 2 of /respond-html resolved (e.g. `~/dev/SGA/<project>/.html-answers/<slug>` or `~/dev/personal/html-answers/<slug>`).
+Where `<absolute-path>` is whichever path Phase 2 of /respond-html resolved (e.g. `~/dev/<project>/.html-answers/<slug>` or your generic html-answers fallback dir).
 
 ### Fallback: local http server (use this when `file://` is rejected)
 
-**Known issue (verified May 2026):** The `claude-in-chrome` MCP's `navigate` tool may prepend `https://` to `file://` URLs, breaking the navigation. When this happens, start a local server first:
+**Known issue:** The `claude-in-chrome` MCP's `navigate` tool may prepend `https://` to `file://` URLs, breaking the navigation. When this happens, start a local server first:
 
 ```bash
 cd <absolute-path> && python3 -m http.server 8765 > /tmp/respond-html-server.log 2>&1 &
@@ -42,7 +42,7 @@ After PASS, stop the server: `kill $SERVER_PID`.
 
 ### Important: localStorage scope
 
-Reactions persist in localStorage keyed by `location.pathname`. `file:///Users/<you>/...` and `http://localhost:8765/...` have **different pathnames** → reactions made on one will NOT show on the other. The chrome-validate gate uses the server; David's `open` at the end uses `file://`. State doesn't migrate — but for the validation step this is OK (chrome-validate doesn't interact with reactions, it just validates the rendered HTML).
+Reactions persist in localStorage keyed by `location.pathname`. `file:///Users/<you>/...` and `http://localhost:8765/...` have **different pathnames** → reactions made on one will NOT show on the other. The chrome-validate gate uses the server; the final `open` uses `file://`. State doesn't migrate — but for the validation step this is OK (chrome-validate doesn't interact with reactions, it just validates the rendered HTML).
 
 ## What `all` runs
 
@@ -77,39 +77,39 @@ EVIDENCE: 6 internal anchors → all resolve to in-page section IDs
          1 external link → https://fonts.googleapis.com/... → 200
 ```
 
-Surface this block verbatim in your reply to David, then add one line of plain English: *"All three gates PASS. Ready for review."*
+Surface this block verbatim in your reply to the user, then add one line of plain English: *"All three gates PASS. Ready for review."*
 
 ## On FAIL
 
 If any gate fails:
 
-1. **Show David the failure first.** Don't auto-fix. Failures often surface content/structural issues he wants to weigh in on (a missing section, a wrong link, a broken decision-block that's a real disagreement, not a CSS bug).
+1. **Show the user the failure first.** Don't auto-fix. Failures often surface content/structural issues they want to weigh in on (a missing section, a wrong link, a broken decision-block that's a real disagreement, not a CSS bug).
 2. **Identify the cause.** Read the file. Identify whether it's:
    - **Pure CSS/template bug** (e.g., mistyped variable) → safe to fix without asking
-   - **Content issue** (missing section, broken anchor, dead link to a doc that doesn't exist) → ask David before fixing
+   - **Content issue** (missing section, broken anchor, dead link to a doc that doesn't exist) → ask the user before fixing
    - **Asset issue** (Google Fonts URL malformed, font subsetting wrong) → fix without asking
 3. **Re-run the gate** after fixing.
-4. **Don't loop.** If the same gate fails 3 times in a row, stop and surface to David with what was tried. The chrome-validate skill itself recommends invoking `superpowers:systematic-debugging` at that point — do so.
+4. **Don't loop.** If the same gate fails 3 times in a row, stop and surface to the user with what was tried. The chrome-validate skill itself recommends invoking a systematic-debugging workflow at that point — do so.
 
 ## What chrome-validate does NOT check
 
-- Czech diacritic rendering (response-artifact is English-default; if generating Czech, run `chrome-validate pdf <pdf>` separately on any exported PDF — though this skill doesn't generate PDFs)
+- Per-sentence language-quality (grammar, register, register mismatch) — that's a text-validation problem, not a browser-validation one
 - Accessibility (use `chrome-devtools-mcp:a11y-debugging` separately if it matters for the artifact)
 - Performance (this is a static reading doc — performance isn't relevant)
 
 ## Don't skip the gate
 
-If chrome-validate is unavailable (e.g., the Chrome MCP extension isn't connected), surface that as a setup-gate FAIL — don't declare the artifact ready. David needs to either reconnect the extension or explicitly tell you "skip the gate this time." The gate exists because untested HTML accumulates silent regressions.
+If chrome-validate is unavailable (e.g., the Chrome MCP extension isn't connected), surface that as a setup-gate FAIL — don't declare the artifact ready. The user needs to either reconnect the extension or explicitly tell you "skip the gate this time." The gate exists because untested HTML accumulates silent regressions.
 
 ## After PASS
 
 ```
-open ~/dev/personal/html-answers/<slug>/index.html
+open <absolute-path>/index.html
 ```
 
 Then the final line:
 
 ```
-Ready at file://~/dev/personal/html-answers/<slug>/index.html — opening now.
+Ready at file://<absolute-path>/index.html — opening now.
 Summary: [1 line on what the artifact contains and the BLUF takeaway]
 ```

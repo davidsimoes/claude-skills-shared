@@ -6,7 +6,7 @@ How to fill in `templates/response-artifact.html` for plans, proposals, comparis
 
 1. **Sticky toolbar** (auto, no fill needed) — stats + 📋 Copy feedback + Clear + theme toggle. Always visible while scrolling.
 2. **Header / eyebrow** — one or two words classifying the artifact: "Plan", "Proposal", "Audit", "Comparison".
-3. **H1 title** — what the artifact is about. Specific, not generic. Bad: "Deploy options". Good: "Migrate the Reservio app to Vercel Pro".
+3. **H1 title** — what the artifact is about. Specific, not generic. Bad: "Deploy options". Good: "Migrate the Acme app to Vercel Pro".
 4. **Subtitle** — one-line framing. The question this artifact answers.
 5. **BLUF** — bottom-line-up-front. 1-3 sentences. Reactable.
 6. **Sections** — see snippet library below. Each section reactable; decision-blocks and callouts inside also reactable.
@@ -24,7 +24,7 @@ Every **reactable unit** gets three buttons (✅ approve / 💬 comment / ❌ re
 
 The template's JS auto-injects the `.react` component + textarea on any reactable unit that doesn't already have one — so you don't have to add them manually. Just write the section/callout/decision-block as normal and the JS handles the rest.
 
-**Caveat**: auto-generated IDs are stable across reloads of the same file but NOT across re-renders. If David reacts on an artifact and you re-render it (e.g., after applying his feedback), the auto-IDs may shift if callouts are added or reordered — and his reactions move to wrong elements. To avoid this, see "Stable feedback IDs" below.
+**Caveat**: auto-generated IDs are stable across reloads of the same file but NOT across re-renders. If the user reacts on an artifact and you re-render it (e.g., after applying his feedback), the auto-IDs may shift if callouts are added or reordered — and his reactions move to wrong elements. To avoid this, see "Stable feedback IDs" below.
 
 ### Optional: assign stable `data-feedback-id` + `data-feedback-label`
 
@@ -66,7 +66,7 @@ Date: 2026-05-13 14:30 · Source: file:///...
 - EDGE CASE: If you clear a textarea… → 💬 comment — great tradeoff framing
 ```
 
-David pastes that back into chat. You read it, act on the rejections/comments, re-render if needed.
+the user pastes that back into chat. You read it, act on the rejections/comments, re-render if needed.
 
 ## TOC
 
@@ -79,7 +79,7 @@ Generated from the H2 section IDs. Build the `{{TOC_ITEMS}}` list as:
 <li><a href="#risks">Risks &amp; open questions</a></li>
 ```
 
-Section titles short (2-5 words). The sidebar is for scanning. Reactions on a section show a tiny ✅/💬/❌ marker next to the TOC entry — so David can see at-a-glance which sections still need attention.
+Section titles short (2-5 words). The sidebar is for scanning. Reactions on a section show a tiny ✅/💬/❌ marker next to the TOC entry — so the user can see at-a-glance which sections still need attention.
 
 ## Snippet library
 
@@ -130,7 +130,7 @@ Four kinds. Use sparingly — one callout per ~300 words of body text is plenty.
 
 ```html
 <div class="decision-block">
-  <div class="q">Which deploy target for the Reservio rewrite?</div>
+  <div class="q">Which deploy target for the Acme rewrite?</div>
   <div class="options">
     <div class="option recommended">
       <h4>Vercel Pro</h4>
@@ -148,7 +148,7 @@ Four kinds. Use sparingly — one callout per ~300 words of body text is plenty.
   <p style="font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 0">
     Rationale: time-to-ship beats infrastructure savings at this scale.
   </p>
-  <!-- JS auto-appends .react component here so David can ✅/💬/❌ the whole decision -->
+  <!-- JS auto-appends .react component here so the user can ✅/💬/❌ the whole decision -->
 </div>
 ```
 
@@ -172,14 +172,14 @@ Four kinds. Use sparingly — one callout per ~300 words of body text is plenty.
 
 ### Open-questions section
 
-The final section before the footer. Bulleted list of things David needs to weigh in on. The whole section is reactable; if David wants to react per question, structure each question as a separate callout instead.
+The final section before the footer. Bulleted list of things the user needs to weigh in on. The whole section is reactable; if the user wants to react per question, structure each question as a separate callout instead.
 
 ```html
 <section id="open">
   <h2><span class="num">05</span> Open questions</h2>
   <ul>
     <li>How much traffic do we actually expect in month 1? Recommendation flips if &gt;1M req/day.</li>
-    <li>Is the Reservio team open to Vercel-specific tooling?</li>
+    <li>Is the Acme team open to Vercel-specific tooling?</li>
     <li>Do we need EU data residency? Vercel Pro doesn't guarantee it.</li>
   </ul>
 </section>
@@ -196,7 +196,7 @@ If you want one reactable unit per question:
   </div>
   <div class="callout recommendation">
     <span class="label">Question 2</span>
-    <p>Is the Reservio team open to Vercel-specific tooling?</p>
+    <p>Is the Acme team open to Vercel-specific tooling?</p>
   </div>
   ...
 </section>
@@ -206,7 +206,7 @@ If you want one reactable unit per question:
 
 - **BLUF**: 30-80 words.
 - **Each H2 section**: 50-300 words of prose + callouts + tables as appropriate. If a section grows past 300 words, split it.
-- **Total reactable units**: aim for 8-20. Fewer than 8 → maybe the artifact is too simple, reply in chat. More than 20 → David will react-fatigue, split the artifact.
+- **Total reactable units**: aim for 8-20. Fewer than 8 → maybe the artifact is too simple, reply in chat. More than 20 → the user will react-fatigue, split the artifact.
 
 ## Filling tokens
 
@@ -214,7 +214,7 @@ Pass through these tokens when substituting into the template:
 
 | Token | Example value | Notes |
 |---|---|---|
-| `{{TITLE}}` | "Migrate Reservio to Vercel Pro" | H1; specific, not generic |
+| `{{TITLE}}` | "Migrate Acme to Vercel Pro" | H1; specific, not generic |
 | `{{SUBTITLE}}` | "How to ship the rewrite in 3 weeks without ops debt" | One-line framing |
 | `{{EYEBROW}}` | "Plan · 3 weeks" | One short category + flavor |
 | `{{BLUF}}` | "Vercel Pro is the recommended path. €200/mo trades off against ~5 days of ops setup elsewhere…" | Bottom-line-up-front, 30-80 words |
@@ -239,9 +239,9 @@ Unicode characters (Czech diacritics, accented Latin, emoji) DON'T need escaping
 
 ## Stable feedback IDs (recommended for callouts and decision-blocks)
 
-The template's JS auto-generates `data-feedback-id` for any reactable unit without one, using `<section-id>__<element-type>-<auto-counter>` (e.g., `routing__callout-decision-1`). This works fine for the first render but is **brittle across re-renders**: if you add or reorder a callout, the auto-counter shifts and David's reactions silently move to the wrong element.
+The template's JS auto-generates `data-feedback-id` for any reactable unit without one, using `<section-id>__<element-type>-<auto-counter>` (e.g., `routing__callout-decision-1`). This works fine for the first render but is **brittle across re-renders**: if you add or reorder a callout, the auto-counter shifts and the user's reactions silently move to the wrong element.
 
-**Strongly recommend** assigning explicit, content-derived `data-feedback-id` on every callout and decision-block when you expect David to react and you might re-render:
+**Strongly recommend** assigning explicit, content-derived `data-feedback-id` on every callout and decision-block when you expect the user to react and you might re-render:
 
 ```html
 <div class="callout decision" data-feedback-id="route-default-ambiguous">
@@ -250,13 +250,13 @@ The template's JS auto-generates `data-feedback-id` for any reactable unit witho
 </div>
 ```
 
-Use kebab-case derived from the callout's gist, prefixed with the section ID. This way David's reactions survive across re-renders.
+Use kebab-case derived from the callout's gist, prefixed with the section ID. This way the user's reactions survive across re-renders.
 
 ## What to skip
 
 - Don't include sections that don't earn their space (a 30-word "Background" section is filler).
 - Don't include callouts that just restate the surrounding paragraph.
-- Don't include a "next steps" section that says "talk to David" — that's implicit.
+- Don't include a "next steps" section that says "talk to the user" — that's implicit.
 
 ## What to never do
 

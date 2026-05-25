@@ -734,8 +734,9 @@
           }
           el.dataset.feedbackLabel = label;
         }
-        // Disambiguate duplicate labels by suffixing the index — David's export reads the label,
-        // so two callouts with identical first-60-chars would be indistinguishable otherwise.
+        // Disambiguate duplicate labels by suffixing the index — the markdown export
+        // reads the label, so two callouts with identical first-60-chars would be
+        // indistinguishable otherwise.
         const lbl = el.dataset.feedbackLabel;
         if (lbl && seenLabels.has(lbl)) {
           const n = seenLabels.get(lbl) + 1;
@@ -945,7 +946,7 @@
       }
     }
     function showCopyOverlay(text) {
-      // Last-resort: surface the markdown in a modal so David can manual-copy.
+      // Last-resort: surface the markdown in a modal so the user can manual-copy.
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:2rem';
       overlay.innerHTML = '<div style="background:var(--bg-elev);padding:1.5rem;border-radius:8px;max-width:60ch;max-height:80vh;overflow:auto;font-family:var(--font-head)"><h3 style="margin:0 0 0.5rem">Copy this manually (Ctrl/Cmd+A then Cmd/Ctrl+C)</h3><textarea style="width:100%;height:50vh;font-family:var(--font-mono);font-size:0.85rem;padding:0.5rem;border:1px solid var(--rule);border-radius:4px;background:var(--bg)" readonly></textarea><button onclick="this.parentElement.parentElement.remove()" style="margin-top:0.5rem;padding:0.4rem 0.8rem;border:1px solid var(--rule-strong);background:var(--bg);border-radius:4px;cursor:pointer">Close</button></div>';
