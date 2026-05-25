@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+
+<!-- CDN failure fallback -->
+<script>
+  window.addEventListener('error', (e) => {
+    if (e.target && e.target.tagName === 'SCRIPT') {
+      document.body && document.body.insertAdjacentHTML('afterbegin',
+        '<div style="background:#fee;color:#900;padding:12px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fca5a5">' +
+        '⚠ A library failed to load (' + (e.target.src || 'unknown') + '). Check your connection.' +
+        '</div>');
+    }
+  }, true);
+</script>
+
+<!-- Mermaid (for flowchart/sequence/state/ER/gantt/journey diagrams) -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+  body { background: #f8fafc; color: #1e293b; font-size: 14px; line-height: 1.5; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .tldr { background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px 20px; margin-bottom: 20px; border-radius: 6px; }
+  .tldr-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; margin-bottom: 6px; }
+  .tldr-body { font-size: 15px; line-height: 1.55; color: #1e293b; }
+
+  .header { background: #1e293b; color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header .subtitle { color: #94a3b8; font-size: 13px; margin-top: 5px; }
+
+  .section { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .section-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 4px; }
+  .section-subtitle { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+  .section-caption { font-size: 11px; color: #94a3b8; margin-top: 12px; font-style: italic; }
+
+  .mermaid { display: flex; justify-content: center; padding: 8px; }
+
+  /* === Custom step-card layout === */
+  .process { display: flex; flex-direction: column; gap: 0; }
+  .step { display: grid; grid-template-columns: 48px 1fr auto; gap: 16px; align-items: start; background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; }
+  .step[data-status="warn"] { border-left: 4px solid #f59e0b; }
+  .step[data-status="fail"] { border-left: 4px solid #dc2626; }
+  .step[data-status="ok"] { border-left: 4px solid #10b981; }
+  .step[data-status="gate"] { border-left: 4px solid #7c3aed; }
+  .step[data-status="info"] { border-left: 4px solid #2563eb; }
+  .step-number { width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; color: #475569; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .step-body { min-width: 0; }
+  .step-title { font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: #475569; margin-bottom: 8px; }
+  .step-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: #64748b; }
+  .step-actor { background: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .step-code code { background: #f8fafc; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 11px; color: #1e293b; }
+  .step-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; align-self: flex-start; }
+  .badge-ok { background: #d1fae5; color: #065f46; }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-fail { background: #fee2e2; color: #991b1b; }
+  .badge-info { background: #dbeafe; color: #1e40af; }
+  .badge-gate { background: #ede9fe; color: #5b21b6; }
+  .step-connector { display: flex; justify-content: center; color: #cbd5e1; font-size: 24px; padding: 4px 0; line-height: 1; }
+
+  /* Branching in custom HTML */
+  .branch { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .branch-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #7c3aed; margin-bottom: 10px; }
+
+  /* Swimlane layout */
+  .swimlanes { display: grid; gap: 0; }
+  .lane { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
+  .lane-label { font-weight: 700; color: #475569; font-size: 13px; padding-top: 4px; }
+  .lane-body { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #64748b; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  .methodology { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .methodology h2 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 10px; }
+  .methodology ul { margin-left: 20px; color: #64748b; font-size: 13px; }
+  .methodology li { margin-bottom: 6px; }
+  .trust-footer { text-align: center; color: #94a3b8; font-size: 11px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+
+  @media (max-width: 900px) {
+    .container { padding: 16px; }
+    .header { padding: 16px 20px; }
+    .header h1 { font-size: 18px; }
+    .section { padding: 16px; }
+    .step { grid-template-columns: 36px 1fr; }
+    .step-status { grid-column: 2; justify-self: start; }
+    .lane { grid-template-columns: 1fr; }
+  }
+
+  /* Dark theme opt-in */
+  body.dark { background: #0d1117; color: #c9d1d9; }
+  body.dark .header { background: #161b22; border: 1px solid #30363d; }
+  body.dark .section, body.dark .step, body.dark .methodology { background: #161b22; border-color: #30363d; }
+  body.dark .step-title, body.dark .section-title { color: #c9d1d9; }
+  body.dark .step-desc { color: #8b949e; }
+  body.dark .step-number { background: #21262d; color: #8b949e; }
+  body.dark .step-actor, body.dark .step-code code { background: #21262d; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="tldr">
+    <div class="tldr-label">What this diagram shows</div>
+    <div class="tldr-body" id="bluf">__BLUF__</div>
+  </div>
+
+  <div class="header">
+    <h1>__TITLE__</h1>
+    <div class="subtitle">__SUBTITLE__</div>
+  </div>
+
+  <!-- __PROCESS_CONTENT__ : skill injects Mermaid blocks and/or step-card layouts here -->
+
+  <div class="methodology">
+    <h2>Methodology & caveats</h2>
+    <ul id="methodology-list">
+      <!-- Skill populates: source of truth (code paths, docs), last verified date, inferred vs measured, known gaps -->
+    </ul>
+  </div>
+
+  <div class="trust-footer">
+    Generated by <code>/dataviz</code> · Source: __SOURCE__ · Last verified: __ASOF__
+  </div>
+
+</div>
+
+<script>
+  // Mermaid init — matches design-system palette
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('dark') ? 'dark' : 'default',
+      flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+      themeVariables: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#ffffff',
+        primaryBorderColor: '#1d4ed8',
+        lineColor: '#64748b',
+        secondaryColor: '#f1f5f9',
+        tertiaryColor: '#e2e8f0',
+        noteTextColor: '#1e293b',
+        noteBkgColor: '#fef3c7'
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

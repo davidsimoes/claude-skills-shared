@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+
+<!-- CDN failure fallback — shows banner if any script fails to load -->
+<script>
+  window.addEventListener('error', (e) => {
+    if (e.target && e.target.tagName === 'SCRIPT') {
+      document.body && document.body.insertAdjacentHTML('afterbegin',
+        '<div style="background:#fee;color:#900;padding:12px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fca5a5">' +
+        '⚠ A chart library failed to load (' + (e.target.src || 'unknown') + '). Check your connection and reload.' +
+        '</div>');
+    }
+  }, true);
+</script>
+
+<!-- __CDN_SLOT__ : skill injects picked library <script> / <link> tags here -->
+
+<style>
+  /* === DESIGN SYSTEM (light theme default) === */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+  body { background: #f8fafc; color: #1e293b; font-size: 14px; line-height: 1.5; }
+
+  .container { max-width: 1440px; margin: 0 auto; padding: 24px; }
+
+  /* TL;DR / BLUF callout */
+  .tldr { background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px 20px; margin-bottom: 20px; border-radius: 6px; }
+  .tldr-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; margin-bottom: 6px; }
+  .tldr-body { font-size: 15px; line-height: 1.55; color: #1e293b; }
+
+  /* Dark header bar */
+  .header { background: #1e293b; color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header .subtitle { color: #94a3b8; font-size: 13px; margin-top: 5px; }
+
+  /* Stat cards */
+  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; }
+  .card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+  .card .value { font-size: 28px; font-weight: 700; margin-top: 4px; color: #1e293b; }
+  .card .delta { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .card .delta.up { color: #059669; }
+  .card .delta.down { color: #dc2626; }
+  .card .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .card .reference { font-size: 11px; color: #64748b; margin-top: 2px; font-style: italic; }
+  .card .caveat { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+  /* Sections (chart containers) */
+  .section { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .section-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .section-subtitle { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+  .section-caption { font-size: 11px; color: #94a3b8; margin-top: 12px; font-style: italic; }
+  .section-tag { font-size: 11px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; }
+
+  /* Chart containers (mobile-responsive via ResizeObserver) */
+  .chart { width: 100%; min-height: 300px; }
+
+  /* Controls (filters, search) */
+  .controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .fbtn { padding: 5px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: white; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; }
+  .fbtn:hover { border-color: #2563eb; color: #2563eb; }
+  .fbtn.active { background: #2563eb; border-color: #2563eb; color: white; }
+  .sbox { margin-left: auto; padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; width: 230px; outline: none; }
+  .sbox:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+
+  /* Tables (fallback; prefer Tabulator) */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 10px; background: #f8fafc; font-weight: 600; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  tr:hover td { background: #fafbfc; }
+
+  /* Methodology + trust footer */
+  .methodology { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .methodology h2 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 10px; }
+  .methodology ul { margin-left: 20px; color: #64748b; font-size: 13px; }
+  .methodology li { margin-bottom: 6px; }
+  .trust-footer { text-align: center; color: #94a3b8; font-size: 11px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+
+  /* Annotation helpers */
+  .annotation { color: #dc2626; font-weight: 600; }
+
+  /* Okabe-Ito CSS variables for categorical palette */
+  :root {
+    --ok-orange: #E69F00;
+    --ok-skyblue: #56B4E9;
+    --ok-green: #009E73;
+    --ok-yellow: #F0E442;
+    --ok-blue: #0072B2;
+    --ok-vermillion: #D55E00;
+    --ok-pink: #CC79A7;
+    --ok-black: #000000;
+    --hero: #2563eb;
+    --accent: #7c3aed;
+    --positive: #009E73;
+    --negative: #D55E00;
+  }
+
+  /* Responsive breakpoint */
+  @media (max-width: 900px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 16px; }
+    .header { padding: 16px 20px; }
+    .header h1 { font-size: 18px; }
+    .section { padding: 16px; }
+  }
+
+  /* === DARK THEME (opt-in via body class) === */
+  body.dark { background: #0d1117; color: #c9d1d9; }
+  body.dark .header { background: #161b22; border: 1px solid #30363d; }
+  body.dark .header .subtitle { color: #8b949e; }
+  body.dark .card { background: #161b22; border-color: #30363d; }
+  body.dark .card .value { color: #c9d1d9; }
+  body.dark .card .label { color: #8b949e; }
+  body.dark .card .sub { color: #6e7681; }
+  body.dark .section { background: #161b22; border-color: #30363d; }
+  body.dark .section-title { color: #c9d1d9; }
+  body.dark .section-subtitle { color: #8b949e; }
+  body.dark .methodology { background: #161b22; border-color: #30363d; }
+  body.dark .tldr { background: #1c2b4a; border-left-color: #58a6ff; }
+  body.dark .tldr-body { color: #c9d1d9; }
+  body.dark .sbox, body.dark .fbtn { background: #161b22; border-color: #30363d; color: #c9d1d9; }
+  body.dark th { background: #161b22; color: #8b949e; border-bottom-color: #30363d; }
+  body.dark td { border-bottom-color: #21262d; }
+  body.dark tr:hover td { background: #1c2128; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- BLUF (Bottom Line Up Front) callout -->
+  <div class="tldr">
+    <div class="tldr-label">Headline</div>
+    <div class="tldr-body" id="bluf">__BLUF__</div>
+  </div>
+
+  <!-- Dark header with title + subtitle -->
+  <div class="header">
+    <h1>__TITLE__</h1>
+    <div class="subtitle">__SUBTITLE__</div>
+  </div>
+
+  <!-- Stat cards (3–5, surprise-density rule) -->
+  <div class="cards" id="summaryCards">
+    <!-- Each card: .label / .value / .delta / .reference / .caveat -->
+  </div>
+
+  <!-- Chart sections (repeat per chart) -->
+  <!-- Template:
+  <div class="section">
+    <div class="section-title">__INSIGHT_TITLE__ <span class="section-tag">__TAG__</span></div>
+    <div class="section-subtitle">__MECHANISM_SUBTITLE__</div>
+    <div class="controls"><!-- optional filter buttons / search --></div>
+    <div class="chart" id="chart-1"></div>
+    <div class="section-caption">Source: __SOURCE__ · as of __ASOF__ · n = __N__</div>
+  </div>
+  -->
+
+  <!-- Methodology + caveats -->
+  <div class="methodology">
+    <h2>Methodology & caveats</h2>
+    <ul id="methodology-list">
+      <!-- Populated by skill: null handling, exclusions, Simpson findings, sample sizes -->
+    </ul>
+  </div>
+
+  <!-- Appendix: Tabulator table mount -->
+  <div class="section" id="appendix-section">
+    <div class="section-title">Appendix — full detail</div>
+    <div class="section-subtitle">Sortable and filterable. Default sort by the dimension most relevant to the headline.</div>
+    <div id="detail-table"></div>
+  </div>
+
+  <div class="trust-footer">
+    Generated by <code>/dataviz</code> · Source: __SOURCE__ · As of __ASOF__ · n = __N__
+  </div>
+
+</div>
+
+<!-- Embedded data (self-contained) -->
+<script id="DATA_BLOCK">
+const DATA = /*__DATA__*/ null;
+</script>
+
+<!-- Plot helper: ResizeObserver pattern (mandatory for Observable Plot charts) -->
+<script>
+function renderPlot(containerId, plotConfig) {
+  const container = document.getElementById(containerId);
+  if (!container || typeof Plot === 'undefined') return;
+  const render = () => {
+    container.innerHTML = '';
+    container.appendChild(Plot.plot({
+      width: container.clientWidth,
+      ...plotConfig
+    }));
+  };
+  new ResizeObserver(render).observe(container);
+  render();
+}
+
+// Vega-Lite safety wrapper — check warnings after embed
+async function renderVegaLite(containerId, spec) {
+  if (typeof vegaEmbed === 'undefined') return;
+  try {
+    const result = await vegaEmbed('#' + containerId, spec, {actions: false});
+    const warnings = result.view.warnings || [];
+    if (warnings.length) console.warn('Vega-Lite warnings:', warnings);
+  } catch (err) {
+    console.error('Vega-Lite render failed:', err);
+    document.getElementById(containerId).innerHTML =
+      '<div style="padding:16px;color:#dc2626;background:#fef2f2;border-radius:6px">' +
+      'Chart render failed: ' + err.message + '</div>';
+  }
+}
+</script>
+
+<!-- __INIT_SCRIPT__ : skill injects chart-init calls here -->
+<script>
+function initReport() {
+  // Skill fills this in:
+  //   - Populate #summaryCards from DATA
+  //   - Populate #methodology-list
+  //   - Call renderPlot / Plotly.newPlot / renderVegaLite / new Chart / new Tabulator for each chart
+}
+initReport();
+</script>
+
+</body>
+</html>

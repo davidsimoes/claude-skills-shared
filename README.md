@@ -1,6 +1,6 @@
 # claude-skills-shared
 
-Four skills for [Claude Code](https://docs.claude.com/en/docs/claude-code) — small, focused tools that change how an agent works in your terminal. Each is a single `SKILL.md` (plus supporting scripts/templates where needed) that Claude Code auto-loads when its description matches what you're asking for.
+Five skills for [Claude Code](https://docs.claude.com/en/docs/claude-code) — small, focused tools that change how an agent works in your terminal. Each is a single `SKILL.md` (plus supporting scripts/templates where needed) that Claude Code auto-loads when its description matches what you're asking for.
 
 ## What's a Claude Code skill?
 
@@ -8,14 +8,26 @@ A skill is a markdown file with frontmatter (`name`, `description`, `user-invoca
 
 Skills compose. One skill can chain to another by reading its file or calling its slash command. Two of the skills here chain to each other; the rest are standalone.
 
-## The four skills
+## The five skills
 
 | Skill | Problem it solves | Standalone? |
 |---|---|---|
 | [`clarify`](./clarify/) | Agents make unilateral assumptions on ambiguous requests, then have to redo work when the assumption was wrong. `clarify` is a structural forcing function: when invoked, the agent MUST stop, audit the request for ambiguity / scope creep / unilateral tradeoffs / irreversible-action risk, and ask via `AskUserQuestion` before continuing. | ✅ Pure prose, no scripts. |
 | [`delegate`](./delegate/) | Long-running or parallelizable work in a single Claude Code session crowds the main context. `delegate` spawns a child Claude session in tmux with a scoped task, registers it in a JSON file, and gives you cooperation verbs (`tell`, `fetch`, `status`, `close`) to drive it from the parent. No MCP dependency — works with any Claude Code install + tmux. | ✅ Needs `tmux`; macOS-tested, should work on Linux. |
 | [`chrome-validate`](./chrome-validate/) | "Looks good" isn't QA. Before sending an HTML or PDF to a client, you need evidence: actual screenshots, computed CSS values, real link liveness, PDF text-diff checks. `chrome-validate` packages six subcommands (`visual`, `css`, `layout`, `links`, `pdf`, `network`) + an `all` suite-mode that runs them sequentially, each with paste-able evidence. | ✅ Needs Chrome MCP (`claude-in-chrome` or `chrome-devtools-mcp`); `pdftotext` for the PDF subcommand. |
-| [`respond-html`](./respond-html/) | When a chat reply has implicit structure (plan, audit, comparison, proposal), the chat format buries it. `respond-html` writes a self-contained HTML artifact with reading-optimized layout, inline ✅/💬/❌ reactions per section/callout/decision-block, and a one-click "copy feedback as markdown" button. The user reacts in the browser, pastes the markdown back to chat, the agent iterates. | ⚠️ Chains to `chrome-validate` for QA (bundled here). Also references `/dataviz` and `/frontend-design` for delegation paths — those aren't in this repo and the skill gracefully degrades without them. |
+| [`dataviz`](./dataviz/) | Charts and process diagrams default to "a label per axis" instead of "a finding the reader can act on". `dataviz` is a 7-phase workflow: PhD-statistician EDA, signal extraction with a review gate, library pick (Observable Plot / Plotly / Vega-Lite / Chart.js / Mermaid), insight-titled rendering. Two modes: **data** (JSON/CSV → dashboard) and **process** (workflow description → annotated diagram). | ✅ Standalone for both modes; can also be invoked by `respond-html` via the Skill tool. |
+| [`respond-html`](./respond-html/) | When a chat reply has implicit structure (plan, audit, comparison, proposal), the chat format buries it. `respond-html` writes a self-contained HTML artifact with reading-optimized layout, inline ✅/💬/❌ reactions per section/callout/decision-block, and a one-click "copy feedback as markdown" button. The user reacts in the browser, pastes the markdown back to chat, the agent iterates. | ⚠️ Chains to `chrome-validate` (bundled) for QA, `dataviz` (bundled) for data + process content, and `frontend-design` (an Anthropic plugin — see below) for UI mockups. Gracefully degrades when any of those are missing. |
+
+### `frontend-design` is an Anthropic plugin, not bundled here
+
+`respond-html` delegates UI/component mockup requests to `frontend-design`, which ships as part of Anthropic's official plugin marketplace rather than as a personal skill. Install it from there if you want that path:
+
+```
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin install frontend-design@claude-plugins-official
+```
+
+Without it, `respond-html` falls back to its own reading-optimized template for everything that isn't a UI mockup — which is most cases.
 
 ## Install
 
@@ -24,7 +36,7 @@ Drop the four skill dirs into your Claude Code skills directory:
 ```bash
 cd ~/.claude/skills
 git clone https://github.com/davidsimoes/claude-skills-shared.git _tmp
-mv _tmp/{clarify,delegate,respond-html,chrome-validate} .
+mv _tmp/{clarify,delegate,respond-html,chrome-validate,dataviz} .
 rm -rf _tmp
 ```
 
@@ -33,7 +45,7 @@ Or, if you'd rather keep the repo elsewhere and symlink (set `REPO_PATH` to wher
 ```bash
 REPO_PATH=~/path/to/claude-skills-shared
 git clone https://github.com/davidsimoes/claude-skills-shared.git "$REPO_PATH"
-for skill in clarify delegate respond-html chrome-validate; do
+for skill in clarify delegate respond-html chrome-validate dataviz; do
   ln -s "$REPO_PATH/$skill" ~/.claude/skills/$skill
 done
 ```
@@ -47,7 +59,8 @@ Restart Claude Code. The skills register via their `user-invocable: true` frontm
 | `clarify` | Nothing | — |
 | `delegate` | `tmux` | — |
 | `chrome-validate` | Chrome MCP server (`claude-in-chrome` or the `chrome-devtools-mcp` plugin), `pdftotext` for the PDF subcommand (macOS: `brew install poppler`) | `bats-core` + `shellcheck` to run the test suite in `chrome-validate/tests/` |
-| `respond-html` | `python3` (for the smoke-test generator) | `chrome-validate` (bundled — used as a post-render QA gate); `/dataviz` and `/frontend-design` (NOT bundled — used for delegation paths, but the skill works without them) |
+| `dataviz` | A browser to open the rendered HTML | — (CDN-loaded libraries: Observable Plot, Plotly, Vega-Lite, Chart.js, Mermaid, Tabulator) |
+| `respond-html` | `python3` (for the smoke-test generator) | `chrome-validate` (bundled — used as a post-render QA gate); `dataviz` (bundled — used for data + process delegation); `frontend-design` (Anthropic plugin, NOT bundled — used for UI mockup delegation, the skill works without it) |
 
 ## Glossary
 
@@ -62,22 +75,30 @@ A few terms used in the skills that might not be obvious:
 ## How the skills relate
 
 ```
-                  ┌──────────────┐
-                  │   clarify    │   (standalone)
-                  └──────────────┘
+   ┌──────────────┐
+   │   clarify    │   (standalone)
+   └──────────────┘
 
-                  ┌──────────────┐
-                  │   delegate   │   (standalone, needs tmux)
-                  └──────────────┘
+   ┌──────────────┐
+   │   delegate   │   (standalone, needs tmux)
+   └──────────────┘
 
-                  ┌─────────────────┐
-                  │  respond-html   │── delegates to ──▶ /dataviz, /frontend-design (NOT bundled)
-                  └────────┬────────┘
-                           │ post-render QA gate
-                           ▼
-                  ┌─────────────────┐
-                  │ chrome-validate │   (standalone, needs Chrome MCP)
-                  └─────────────────┘
+   ┌────────────┐               (Anthropic plugin,
+   │  dataviz   │               install separately)
+   └─────┬──────┘               ┌──────────────────┐
+         │                      │ frontend-design  │
+         │  delegates           └────────┬─────────┘
+         │  data + process               │
+         │  content                      │  delegates UI
+         ▼                               ▼  mockups
+   ┌─────────────────┐  ◀───────────────┘
+   │  respond-html   │
+   └────────┬────────┘
+            │ post-render QA gate
+            ▼
+   ┌─────────────────┐
+   │ chrome-validate │   (standalone, needs Chrome MCP)
+   └─────────────────┘
 ```
 
 You can install any subset. Installing only `respond-html` without `chrome-validate` is fine — the validation step will surface a "setup gate FAIL" and the rest of the artifact still renders.
