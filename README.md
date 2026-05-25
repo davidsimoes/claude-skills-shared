@@ -18,19 +18,19 @@ This is the MVP — four skills picked because they're the most reusable across 
 ```bash
 # In your Claude Code config dir (usually ~/.claude/skills/):
 cd ~/.claude/skills
-git clone https://github.com/davidsimoes/claude-skills-shared.git tmp-skills
-mv tmp-skills/{clarify,delegate,respond-html,chrome-validate} .
-rm -rf tmp-skills
+git clone https://github.com/davidsimoes/claude-skills-shared.git _tmp
+mv _tmp/{clarify,delegate,respond-html,chrome-validate} .
+rm -rf _tmp
 ```
 
-Or symlink if you want to track upstream:
+Or, if you'd rather keep the repo elsewhere and symlink (set `REPO_PATH` to wherever you want it):
 
 ```bash
-git clone https://github.com/davidsimoes/claude-skills-shared.git ~/dev/personal/claude-skills-shared
-ln -s ~/dev/personal/claude-skills-shared/clarify ~/.claude/skills/clarify
-ln -s ~/dev/personal/claude-skills-shared/delegate ~/.claude/skills/delegate
-ln -s ~/dev/personal/claude-skills-shared/respond-html ~/.claude/skills/respond-html
-ln -s ~/dev/personal/claude-skills-shared/chrome-validate ~/.claude/skills/chrome-validate
+REPO_PATH=~/path/to/claude-skills-shared
+git clone https://github.com/davidsimoes/claude-skills-shared.git "$REPO_PATH"
+for skill in clarify delegate respond-html chrome-validate; do
+  ln -s "$REPO_PATH/$skill" ~/.claude/skills/$skill
+done
 ```
 
 Restart Claude Code. The skills register from `frontmatter.user-invocable: true` — no other config needed.
