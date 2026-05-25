@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>chrome-validate column-alignment fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; }
+    h2 { margin-top: 32px; }
+
+    /* #bad — the original PR #22 bug shape: default flex, children sized to content.
+       Each row sizes its columns independently to its own content, so columns drift. */
+    .bad-row { display: flex; gap: 16px; padding: 6px 0; }
+
+    /* #good — the PR #22 fix: every row uses one shared grid-template-columns,
+       so column N has one deterministic width across header + data rows. */
+    .grid-row { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); gap: 16px; padding: 6px 0; }
+
+    .num { text-align: right; }
+    p { color: #555; max-width: 700px; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 4px; max-width: 700px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>/chrome-validate — column-alignment self-test</h1>
+  <p>
+    Two tables, same data. The first uses <strong>default flex per row</strong> (children sized to content) — this
+    is the original bug pattern from PR #22, where each row sizes its columns to its own content and the columns
+    drift out of alignment with the header. The second uses a <strong>shared CSS-grid template</strong> on every
+    row, so column N has one deterministic width across the whole table.
+  </p>
+  <p>
+    The column-alignment sub-check should produce <code>allOK: false</code> for <code>#bad &gt; div</code> and
+    <code>allOK: true</code> for <code>#good &gt; div</code>.
+  </p>
+
+  <h2>#bad — independent flex rows, children sized to content (expected: FAIL)</h2>
+  <div id="bad">
+    <div class="bad-row" style="font-weight: 600; border-bottom: 1px solid #ccc;">
+      <div>Month</div>
+      <div class="num">Earned</div>
+      <div class="num">Invoiced</div>
+      <div class="num">Delta</div>
+      <div class="num">Running total</div>
+    </div>
+    <div class="bad-row">
+      <div>2026-05</div>
+      <div class="num">8</div>
+      <div class="num">100</div>
+      <div class="num">−92</div>
+      <div class="num">+8 106</div>
+    </div>
+    <div class="bad-row">
+      <div>2026-04</div>
+      <div class="num">340 000</div>
+      <div class="num">305 809</div>
+      <div class="num">+34 191</div>
+      <div class="num">+34 191</div>
+    </div>
+    <div class="bad-row">
+      <div>2026-03</div>
+      <div class="num">24</div>
+      <div class="num">14</div>
+      <div class="num">+10</div>
+      <div class="num">+24 146</div>
+    </div>
+  </div>
+
+  <h2>#good — shared CSS-grid template (expected: PASS)</h2>
+  <div id="good" style="width: 800px;">
+    <div class="grid-row" style="font-weight: 600; border-bottom: 1px solid #ccc;">
+      <div>Month</div>
+      <div class="num">Earned</div>
+      <div class="num">Invoiced</div>
+      <div class="num">Delta</div>
+      <div class="num">Running total</div>
+    </div>
+    <div class="grid-row">
+      <div>2026-05</div>
+      <div class="num">8</div>
+      <div class="num">100</div>
+      <div class="num">−92</div>
+      <div class="num">+8 106</div>
+    </div>
+    <div class="grid-row">
+      <div>2026-04</div>
+      <div class="num">340 000</div>
+      <div class="num">305 809</div>
+      <div class="num">+34 191</div>
+      <div class="num">+34 191</div>
+    </div>
+    <div class="grid-row">
+      <div>2026-03</div>
+      <div class="num">24</div>
+      <div class="num">14</div>
+      <div class="num">+10</div>
+      <div class="num">+24 146</div>
+    </div>
+  </div>
+
+  <h2>Verify in the browser console</h2>
+  <pre>
+function check(sel) {
+  const rows = Array.from(document.querySelectorAll(sel));
+  const header = rows[0];
+  const dataRows = rows.slice(1);
+  const tol = 2;
+  const out = [];
+  let allOK = true;
+  for (let col = 0; col &lt; header.children.length; col++) {
+    const h = header.children[col].getBoundingClientRect();
+    const rs = dataRows.map(r =&gt; r.children[col].getBoundingClientRect());
+    const maxAbs = Math.max(...rs.flatMap(r =&gt; [Math.abs(r.left - h.left), Math.abs(r.right - h.right)]));
+    const ok = maxAbs &lt;= tol;
+    if (!ok) allOK = false;
+    out.push({ col, name: header.children[col].textContent.trim(), maxAbsΔ: +maxAbs.toFixed(2), OK: ok });
+  }
+  return { allOK, columns: out };
+}
+check('#bad &gt; div');   // expected: allOK === false
+check('#good &gt; div');  // expected: allOK === true
+  </pre>
+</body>
+</html>
