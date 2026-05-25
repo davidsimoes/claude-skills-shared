@@ -57,7 +57,7 @@ Restart Claude Code. The skills register via their `user-invocable: true` frontm
 | Skill | Required | Optional |
 |---|---|---|
 | `clarify` | Nothing | — |
-| `delegate` | `tmux` | — |
+| `delegate` | `tmux` (new to tmux? see [`delegate/tmux-primer.md`](./delegate/tmux-primer.md)) | — |
 | `chrome-validate` | Chrome MCP server (`claude-in-chrome` or the `chrome-devtools-mcp` plugin), `pdftotext` for the PDF subcommand (macOS: `brew install poppler`) | `bats-core` + `shellcheck` to run the test suite in `chrome-validate/tests/` |
 | `dataviz` | A browser to open the rendered HTML | — (CDN-loaded libraries: Observable Plot, Plotly, Vega-Lite, Chart.js, Mermaid, Tabulator) |
 | `respond-html` | `python3` (for the smoke-test generator) | `chrome-validate` (bundled — used as a post-render QA gate); `dataviz` (bundled — used for data + process delegation); `frontend-design` (Anthropic plugin, NOT bundled — used for UI mockup delegation, the skill works without it) |

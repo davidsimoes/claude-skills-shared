@@ -223,6 +223,7 @@ Key rules:
 
 ## References
 
+- **New to tmux? Start here:** `tmux-primer.md` — session/window/pane in plain English, with the placement table.
 - Startup prompt template: `templates/startup-prompt.md`
 - Cooperation instructions appended to child: `references/cooperate-instructions.md`
 - Cooperation verbs full spec: `references/cooperation-verbs.md`
