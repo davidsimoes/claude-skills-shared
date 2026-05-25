@@ -1,0 +1,67 @@
+name: Skill suggestion
+description: Suggest a new skill to add to the collection, or a major addition to an existing one.
+labels: [enhancement, skill-suggestion]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. The bar for a new skill is "useful to people beyond me" — see [CONTRIBUTING.md](https://github.com/davidsimoes/claude-skills-shared/blob/main/CONTRIBUTING.md) for what makes a skill ship-worthy here.
+
+  - type: input
+    id: skill-name
+    attributes:
+      label: Proposed skill name (kebab-case)
+      placeholder: "e.g. weekly-digest, code-archeologist"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: Be specific. "Improves productivity" is not specific. "Triages the GitHub PR review queue across N repos and applies labels by area" is specific.
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: What trigger phrases would invoke it?
+      description: What would a user say in chat to summon this skill? List 3-5 phrasings.
+      placeholder: |
+        - "what's in my PR queue"
+        - "/pr-watch"
+        - "any PRs waiting on me"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dependencies
+    attributes:
+      label: External dependencies
+      multiple: true
+      options:
+        - "None — pure prose"
+        - "tmux"
+        - "git / gh CLI"
+        - "An MCP server (specify in 'Anything else?')"
+        - "A scripting language (Python, Node, etc.)"
+        - "A third-party CLI tool (specify in 'Anything else?')"
+        - "Another skill in this repo (specify which)"
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Standalone or chains to existing skills?
+      options:
+        - "Standalone"
+        - "Chains to one or more existing skills"
+        - "Replaces an existing skill"
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: Rough sketch of the implementation, links to similar tools, prior art — whatever helps make the case.

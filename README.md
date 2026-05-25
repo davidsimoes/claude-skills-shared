@@ -2,6 +2,10 @@
 
 Nine skills for [Claude Code](https://docs.claude.com/en/docs/claude-code) — small, focused tools that change how an agent works in your terminal. Each is a single `SKILL.md` (plus supporting scripts/templates where needed) that Claude Code auto-loads when its description matches what you're asking for.
 
+![respond-html demo artifact](./docs/respond-html-demo.png)
+
+*Above: `respond-html` rendering a structured reply with reactable units. Inline ✅/💬/❌ buttons on every section/callout, live counts in the sticky toolbar, one-click copy as markdown. One of the 9 skills shipped here.*
+
 ## What's a Claude Code skill?
 
 A skill is a markdown file with frontmatter (`name`, `description`, `user-invocable: true`) plus optional supporting files. When Claude Code starts a session it indexes every skill in `~/.claude/skills/`. When your request matches a skill's trigger phrases — or when you type the skill's slash command (e.g. `/clarify`) — Claude invokes it. From the agent's side, "invoking a skill" means loading the SKILL.md content and following its instructions.

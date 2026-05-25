@@ -1,0 +1,33 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bats:
+    name: bats + shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats-core
+        run: |
+          git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git /tmp/bats
+          sudo /tmp/bats/install.sh /usr/local
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Versions
+        run: |
+          bats --version
+          shellcheck --version | head -2
+
+      - name: Run chrome-validate tests
+        run: bash chrome-validate/tests/run-tests.sh
+
+      - name: Run fresh-eyes tests
+        run: bash fresh-eyes/tests/run-tests.sh

@@ -1,0 +1,73 @@
+name: Bug report
+description: A skill doesn't behave as documented, a script errors, or something is broken.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please include enough information that someone can reproduce the issue.
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill is affected?
+      options:
+        - clarify
+        - delegate
+        - respond-html
+        - chrome-validate
+        - dataviz
+        - fresh-eyes
+        - second-opinion
+        - plan-archive
+        - pre-send
+        - "Multiple / unsure"
+        - "Repo infrastructure (README, hooks, CI, etc.)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you observe? Paste error output if there is one.
+      placeholder: "When I ran `/delegate ...` the child session..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: How can someone else reproduce this? Bash commands, prompts, file contents — whatever's needed.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: claude-code-version
+    attributes:
+      label: Claude Code version
+      description: "Output of `claude --version` if you have it."
+      placeholder: "e.g. 1.2.3"
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 14.x / Ubuntu 22.04 / etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: Logs, screenshots, related issues, theories — whatever helps.
