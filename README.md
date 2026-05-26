@@ -1,10 +1,10 @@
 # claude-skills-shared
 
-Nine skills for [Claude Code](https://docs.claude.com/en/docs/claude-code) — small, focused tools that change how an agent works in your terminal. Each is a single `SKILL.md` (plus supporting scripts/templates where needed) that Claude Code auto-loads when its description matches what you're asking for.
+Eleven skills for [Claude Code](https://docs.claude.com/en/docs/claude-code) — small, focused tools that change how an agent works in your terminal. Each is a single `SKILL.md` (plus supporting scripts/templates where needed) that Claude Code auto-loads when its description matches what you're asking for.
 
 ![respond-html demo artifact](./docs/respond-html-demo.png)
 
-*Above: `respond-html` rendering a structured reply with reactable units. Inline ✅/💬/❌ buttons on every section/callout, live counts in the sticky toolbar, one-click copy as markdown. One of the 9 skills shipped here.*
+*Above: `respond-html` rendering a structured reply with reactable units. Inline ✅/💬/❌ buttons on every section/callout, live counts in the sticky toolbar, one-click copy as markdown. One of the 11 skills shipped here.*
 
 ## What's a Claude Code skill?
 
@@ -12,7 +12,7 @@ A skill is a markdown file with frontmatter (`name`, `description`, `user-invoca
 
 Skills compose. One skill can chain to another by reading its file or calling its slash command. Several of the skills here chain to each other (e.g. `respond-html` calls `chrome-validate` for QA; `fresh-eyes` uses `delegate` to spawn verification subagents); the rest are standalone.
 
-## The nine skills
+## The eleven skills
 
 ### Output & QA
 
@@ -37,6 +37,13 @@ Skills compose. One skill can chain to another by reading its file or calling it
 | [`delegate`](./delegate/) | Long-running or parallelizable work in a single Claude Code session crowds the main context. `delegate` spawns a child Claude session in tmux with a scoped task, registers it in a JSON file, and gives you cooperation verbs (`tell`, `fetch`, `status`, `close`) to drive it from the parent. No MCP dependency — works with any Claude Code install + tmux. | ✅ Needs `tmux`; macOS-tested, should work on Linux. |
 | [`pre-send`](./pre-send/) | Behavioural "always confirm before send" rules fail in practice — agents interpret "start" as confirmation, send modified drafts without re-confirmation, fire from wakeups with no human in the loop. `pre-send` pairs a SKILL.md (the approval ritual) with a PreToolUse hook (`send-gate.sh`, bundled) that physically blocks send tools unless a fresh single-use approval flag exists. Structural enforcement of confirmation rather than behavioural. | ⚠️ Hook lives in `pre-send/hooks/send-gate.sh` and needs to be wired into your `settings.local.json` — instructions in the SKILL.md. |
 | [`plan-archive`](./plan-archive/) | Architecture decisions and strategic plans get made, executed, and forgotten — no way to retrospectively check "did similar bets pay off?" `plan-archive` saves any plan to a central dated archive directory with a standard template (context, decision, alternatives, open questions, retrospective). Useful both as a manual `/plan-archive` and as an end-of-session ritual triggered by a session-close skill. | ✅ Default location is `~/.claude-plans/`, overridable via `CLAUDE_PLANS_DIR`. Auto-commits if the archive dir is a git repo. |
+
+### Session lifecycle
+
+| Skill | Problem it solves | Standalone? |
+|---|---|---|
+| [`restart-process`](./restart-process/) | Multiple concurrent tmux Claude sessions get destroyed by OS / `claude` binary updates that require a reboot — and `claude --resume` reuses the old binary, defeating the point of updating. `restart-process` snapshots every in-flight Claude session into an atomic, checksummed manifest (per-pane handoff files + tmux layout + session state), pre-commits dirty repos centrally, optionally updates `claude` + `brew`, then kills all old Claude PIDs except its own. The terminal stays alive so you can `reboot` manually. | ✅ Needs `tmux` ≥ 3.0, `python3` ≥ 3.10, `claude` on PATH. macOS-tested; Linux paths exist but are less battle-tested. Honours `RESTART_HANDOFFS_DIR` env var (default `~/.cache/claude-restart/`) and `CLAUDE_CONFIG_DIRS` for multi-profile setups. Pairs with `restart-resume`. |
+| [`restart-resume`](./restart-resume/) | After reboot, you don't want to manually re-open every tmux session and re-orient each Claude. `restart-resume` reads the manifest, recreates tmux sessions / windows / panes with their original geometry, and spawns FRESH `claude` processes per Claude pane with the captured handoff as the first user message — so each Claude wakes up knowing exactly what it was doing. Built around `restore.sh` with bats tests covering non-contiguous window indices, own-pane skip, symlink-race avoidance, and rename safety on pre-existing sessions. | ✅ Reads the same `RESTART_HANDOFFS_DIR` location. Engine + tests live in the bundled `restart-process` skill. Pairs with `restart-process`. |
 
 ### `frontend-design` is an Anthropic plugin, not bundled here
 
@@ -85,6 +92,8 @@ Restart Claude Code. The skills register via their `user-invocable: true` frontm
 | `second-opinion` | — | Gemini CLI (e.g. `gemini` from `@google/generative-ai-cli`) for the Gemini reviewer; without it the skill runs Claude-only and notes the degraded coverage |
 | `plan-archive` | A writable directory for archived plans (default `~/.claude-plans/`, override with `CLAUDE_PLANS_DIR`) | git (auto-commits archive entries if the dir is a repo) |
 | `pre-send` | Wire `pre-send/hooks/send-gate.sh` into `~/.claude/settings.local.json` as a PreToolUse hook covering your send tools (instructions in the SKILL.md) | — |
+| `restart-process` | `tmux` ≥ 3.0, `python3` ≥ 3.10, `claude` on PATH. macOS-tested. | `bats-core` + `shellcheck` to run `restart-process/tests/`; `RESTART_HANDOFFS_DIR` env var to override the default archive location (`~/.cache/claude-restart/`); `CLAUDE_CONFIG_DIRS` (colon-separated) if you have multiple Claude profile config dirs |
+| `restart-resume` | A manifest produced by `restart-process` at `${RESTART_HANDOFFS_DIR:-$HOME/.cache/claude-restart}/latest/manifest.json`. The engine + tests live in the `restart-process` skill — install both. | — |
 
 ## Glossary
 
