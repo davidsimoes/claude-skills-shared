@@ -111,10 +111,14 @@ summary_key() {
     [ "$(tmux display-message -t "$SESS:6" -p '#{window_name}')" = "sixth" ]
 }
 
-@test "restore skips own_pane respawn even when not marked is_orchestrator" {
+@test "restore displaces own_pane handoff into a new window (no information loss)" {
     local SESS="${SESS_PREFIX}-ownpane"
     # Two regular Claude panes. Neither has is_orchestrator=true. We override
-    # own_pane to point at window 2 — that pane must still be skipped.
+    # own_pane to point at window 2 — that pane is the de facto orchestrator and
+    # must NOT be respawned, but its handoff should NOT be lost either: restore
+    # is expected to spawn a fresh window in the same session with the handoff
+    # loaded. (Pre-2026-05-26 the handoff was orphaned on disk and the user had
+    # to recover manually.)
     local windows='[
         {"session":"'"$SESS"'","window_index":1,"window_name":"claude1",
          "window_layout":"deadbeef,80x24,0,0,1",
@@ -130,9 +134,21 @@ summary_key() {
     RESTORE_OWN_PANE_OVERRIDE="$SESS:2.1" run bash "$RESTORE_SH" "$TMPDIR_TEST"
     [ "$status" -eq 0 ]
 
-    # JSON summary should show 1 restored, 1 skipped.
-    [ "$(summary_key restored_panes)" = "1" ]
-    [ "$(summary_key skipped_panes)" = "1" ]
+    # Both manifest claudes end up with a running pane — the second one at a
+    # displaced index (3, since 1 and 2 already exist after the main loop).
+    [ "$(summary_key restored_panes)" = "2" ]
+    [ "$(summary_key skipped_panes)" = "0" ]
+
+    # tmux should have 3 windows: the two original + one displaced.
+    local indices
+    indices=$(tmux list-windows -t "$SESS" -F '#{window_index}' | sort -n | paste -sd, -)
+    [ "$indices" = "1,2,3" ]
+
+    # The displaced window should carry the manifest's name + " (resumed)" suffix.
+    [ "$(tmux display-message -t "$SESS:3" -p '#{window_name}')" = "claude2 (resumed)" ]
+
+    # The stderr log should announce the displacement explicitly.
+    [[ "$output" == *"DISPLACED: $SESS:2.1"*"$SESS:3.1"* ]]
 }
 
 @test "restore renames auto-created first window of a freshly-created session" {

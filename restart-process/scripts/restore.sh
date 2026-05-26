@@ -146,6 +146,10 @@ errors = []
 # Track sessions we just created — only those have windows safe to rename
 # (in pre-existing user sessions, window names may belong to user work).
 freshly_created_sessions = set()
+# Track own-pane collisions whose handoffs need displaced-spawn in a fresh window
+# of the same session AFTER the main R4 loop completes — see R7 below.
+displaced_queue = []
+displaced_results = []
 
 for w in m["windows"]:
     session = w["session"]
@@ -227,11 +231,24 @@ for w in m["windows"]:
             print(f"NOTE: skipping respawn of {tmux_target_pane} — this pane is the {label}",
                   file=sys.stderr)
             handoff_rel = p.get("handoff_path")
-            if handoff_rel:
+            if p.get("is_claude") and handoff_rel:
+                # Queue for displaced-spawn AFTER the R4 loop completes — see R7. Spawning
+                # now would race with subsequent windows of the same session being created
+                # at higher indices. Deferring guarantees we know the true max-index when we
+                # pick a target for the displaced pane.
+                displaced_queue.append({
+                    "session": session,
+                    "orig_target_pane": tmux_target_pane,
+                    "window_name": win_name,
+                    "label": label,
+                    "handoff_rel": handoff_rel,
+                    "cwd": p.get("cwd") or p.get("pane_path") or os.path.expanduser("~"),
+                })
+                print(f"  queued displaced spawn for {tmux_target_pane} (will land at "
+                      f"{session}:<next-free-index> after main loop)", file=sys.stderr)
+            elif handoff_rel:
+                # Non-claude pane with handoff — should be rare, just point at the file.
                 print(f"  handoff (unresumed) at: {os.path.join(manifest_dir, handoff_rel)}",
-                      file=sys.stderr)
-                print(f"  to resume manually: open a new window/pane and run\n"
-                      f"    cd <cwd> && claude \"$(cat {os.path.join(manifest_dir, handoff_rel)})\"",
                       file=sys.stderr)
             skipped_count += 1
             continue
@@ -261,6 +278,54 @@ for w in m["windows"]:
                     errors.append(f"send-keys (non-claude argv) failed for {tmux_target_pane}")
             restored_count += 1
 
+# R7. Process the displaced-spawn queue. Each item is an own-pane skip whose handoff
+# would otherwise be lost. Spawn a fresh window in the same session at the next free
+# index, with the manifest's window name + " (resumed)" so the user can see it was
+# displaced. This is what /restart-resume now does instead of leaving the handoff
+# orphaned on disk.
+import shlex
+for item in displaced_queue:
+    sess = item["session"]
+    orig = item["orig_target_pane"]
+    handoff_abs = os.path.join(manifest_dir, item["handoff_rel"])
+    cwd = item["cwd"]
+    base_name = item["window_name"] or "displaced"
+    new_name = f"{base_name} (resumed)"
+
+    rc, idx_out = tmux("list-windows", "-t", sess, "-F", "#{window_index}", check=False)
+    if rc != 0:
+        errors.append(f"displaced: list-windows failed for session {sess!r}; "
+                      f"manual recovery — handoff at {handoff_abs}")
+        continue
+    existing = [int(i) for i in idx_out.splitlines() if i.strip().isdigit()]
+    new_idx = (max(existing) if existing else 0) + 1
+    new_target_window = f"{sess}:{new_idx}"
+    new_target_pane = f"{new_target_window}.1"
+
+    rc, _ = tmux("new-window", "-t", new_target_window, "-n", new_name, "-c", cwd, check=False)
+    if rc != 0:
+        errors.append(f"displaced: new-window failed for {new_target_window}; "
+                      f"manual recovery — handoff at {handoff_abs}")
+        continue
+
+    time.sleep(0.3)
+    cmd_str = f'cd {shlex.quote(cwd)} && claude "$(cat {shlex.quote(handoff_abs)})"'
+    rc, _ = tmux("send-keys", "-t", new_target_pane, cmd_str, "Enter", check=False)
+    if rc != 0:
+        errors.append(f"displaced: send-keys failed for {new_target_pane}; "
+                      f"manual recovery — handoff at {handoff_abs}")
+        continue
+
+    print(f"DISPLACED: {orig} ({item['label']}) → spawned at {new_target_pane} "
+          f"(window {new_name!r})", file=sys.stderr)
+    displaced_results.append({
+        "orig_target_pane": orig,
+        "new_target_pane": new_target_pane,
+        "window_name": new_name,
+    })
+    restored_count += 1
+    skipped_count -= 1  # un-skip: we successfully placed the handoff elsewhere
+
 # R6. Mark manifest as restored (atomic: write to .tmp + fsync + rename)
 marker = os.path.join(manifest_dir, "restored_at")
 marker_tmp = marker + ".tmp"
@@ -285,6 +350,7 @@ if os.path.islink(latest):
 print(json.dumps({
     "restored_panes": restored_count,
     "skipped_panes": skipped_count,
+    "displaced_panes": displaced_results,
     "errors": errors,
     "manifest_dir": manifest_dir,
 }))
