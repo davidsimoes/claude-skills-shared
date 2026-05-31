@@ -18,8 +18,8 @@ jobs:
           git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git /tmp/bats
           sudo /tmp/bats/install.sh /usr/local
 
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Install shellcheck + poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y shellcheck poppler-utils
 
       - name: Versions
         run: |
