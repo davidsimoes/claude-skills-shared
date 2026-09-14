@@ -27,8 +27,41 @@ done
 
 [ ${#RANGES[@]} -eq 0 ] && exit 0
 
-# Get added lines only from the push range
-DIFF_CONTENT=$(git diff --no-color "${RANGES[@]}" -- ':!*.lock' ':!package-lock.json' 2>/dev/null | grep '^+' | grep -v '^+++' || true)
+# Get added lines only from the push range.
+#
+# Scan the PATCH SERIES, not a two-point tree diff. Two defects fixed 2026-09-10, both
+# exercised against a throwaway repo rather than reasoned about:
+#
+#   1. FAIL-OPEN ON A NEW BRANCH. `git diff <oid> --not --remotes` is not a valid git diff
+#      invocation - diff takes two endpoints, not rev-list traversal flags. When remote_oid
+#      is all-zero (a new branch, and every first push of a new public repo) it produced no
+#      output at all, so a commit carrying an AKIA-prefixed AWS key passed with exit 0 and not
+#      one line of output - indistinguishable from "nothing to scan". Measured: existing
+#      branch exit=1, new branch exit=0, same planted key.
+#   2. ADD-THEN-REMOVE NETS TO ZERO. Even on an existing branch a tree diff cancels a secret
+#      added in one commit and deleted in the next, while both commits and the blob still
+#      reach the remote forever. A push publishes patches, not tree state.
+#
+# The Claude-side scanner had the identical bug and was
+# fixed the same way on 2026-09-09; this is the same class, swept.
+#
+# And the enumeration now FAILS CLOSED: a range git cannot walk refuses the push instead of
+# passing on evidence it never gathered.
+if ! RAW_LOG=$(git log -p --no-color --format= "${RANGES[@]}" -- ':!*.lock' ':!package-lock.json' 2>&1); then
+    {
+        echo ""
+        echo "[X] pre-push security scan could not enumerate the commits this push would publish."
+        echo ""
+        echo "    git said: $RAW_LOG"
+        echo ""
+        echo "    Refusing the push rather than reporting an all-clear it never earned."
+        echo "    Fetch first so remote-tracking refs exist, then retry."
+        echo ""
+    } >&2
+    exit 1
+fi
+
+DIFF_CONTENT=$(printf '%s\n' "$RAW_LOG" | grep '^+' | grep -v '^+++' || true)
 [ -z "$DIFF_CONTENT" ] && exit 0
 
 VIOLATIONS=""
