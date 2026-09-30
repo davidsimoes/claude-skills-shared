@@ -91,10 +91,12 @@ git config core.hooksPath .githooks
 
 What it does on every `git push`:
 
-1. Reads the to-be-pushed commit range.
-2. Greps the added lines for an always-on API-key regex sweep (GitHub PATs, OpenAI/Stripe secrets, AWS keys, JWTs, Slack tokens, etc.).
-3. If you've set `GIT_OS_BLOCKLIST=/path/to/your/blocklist.md`, also greps for any literal patterns from the `## §2+` sections of that file.
-4. Blocks the push if anything matches.
+1. Asks the push URL (`git ls-remote`) what it already has. Everything else the push would send is new: commits, annotated tags, trees, files, and ref names.
+2. Runs an always-on API-key regex sweep (GitHub PATs, OpenAI/Stripe secrets, AWS keys, JWTs, Slack tokens, etc.) over every byte of those new objects. That covers file contents (binary included), file names, commit messages, author and committer lines, and tag messages.
+3. If you've set `GIT_OS_BLOCKLIST=/path/to/your/blocklist.md`, also greps for any literal patterns from the `## §2+` sections of that file. It checks new commits, tags, trees and ref names in full, but only the *added lines* of changed files, so editing a file that already carries a listed string does not block.
+4. Blocks the push if anything matches. If it cannot tell what the push would publish (the remote cannot be listed, or URL rewriting would send the listing somewhere other than the push), it refuses instead of passing.
+
+Needs git 2.36 or newer. Known gap: a blocklist word added by an octopus merge itself is not seen (API keys in the same shape are).
 
 The hook is opt-in (no `core.hooksPath = .githooks` → no scan). Bypass once with `git push --no-verify` if needed (not recommended).
 
